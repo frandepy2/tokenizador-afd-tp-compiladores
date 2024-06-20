@@ -106,7 +106,7 @@ class TokenizadorAFD:
             # el estado es el tipo de lexema, id_lexema es la posicion en el diccionario de lexemas y es_aceptado es si es aceptado o no
             estado, id_lexema, es_aceptado = self.afd.evaluar_lexema(lexema)
             if es_aceptado:
-                print(f"Lexema aceptado: {lexema} se detecto como {estado} en la posicion {self.posicion}, posicion en el diccionario: {id_lexema} palabra original: {palabras[self.posicion]}")
+                print(f"Lexema aceptado: {lexema} se detecto como {estado} en la posicion {self.posicion+1}, posicion en el diccionario: {id_lexema} palabra original: {palabras[self.posicion]}")
                 #Agregamos a lista_salida el proceso con el formato TXT#-N donde TXT es una etiqueta fija, # es el id del lexema y N es la posicion en el texto
                 #En el caso de Error Lexixo el id de lexema es 0
                 self.lista_salida.append(f"TXT{id_lexema}-{self.posicion+1}")
