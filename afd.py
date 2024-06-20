@@ -1,4 +1,8 @@
 import re
+import json
+import os
+from datetime import datetime
+
 # Codigo para crear un AFD
 
 # Este afd usa patrones por extensión, es decir, se definen los estados con cada elemento y transiciones
@@ -38,7 +42,27 @@ class AFD:
     # Devuelve cada lexema con su id
     def get_ids(self):
         return self.lexema_ids
+    
+    # Devuelve el AFD en formato JSON
+    def guardar_en_json(self, filename):
+        data = {
+            'estado_inicial': self.estado_inicial,
+            'estados_finales': self.estados_finales,
+            'transiciones': self.transiciones,
+            'lexema_ids': self.lexema_ids,
+            'next_id': self.next_id
+        }
+        with open(filename, 'w') as f:
+            json.dump(data, f)
 
+    def cargar_de_json(self, filename):
+        with open(filename, 'r') as f:
+            data = json.load(f)
+        self.estado_inicial = data['estado_inicial']
+        self.estados_finales = data['estados_finales']
+        self.transiciones = data['transiciones']
+        self.lexema_ids = data['lexema_ids']
+        self.next_id = data['next_id']
 
 class TokenizadorAFD:
     def __init__(self):
@@ -62,9 +86,6 @@ class TokenizadorAFD:
         print("Creando AFD")
         afd = AFD(estado_inicial, estado_finales)
         print("AFD creado")
-        print(afd.estado_inicial)
-        print(afd.estados_finales)
-        print(afd.transiciones)
         return afd
 
     def agregar_articulo(self, articulo):
@@ -91,6 +112,12 @@ class TokenizadorAFD:
         self.afd.agregar_transicion("q0", error_lx, "q_ERROR_LX,")
         return self.afd.lexema_ids[error_lx]
 
+        
+    def guardar_afd(self, filename):
+        self.afd.guardar_en_json(filename)
+
+    def cargar_afd(self, filename):
+        self.afd.cargar_de_json(filename)
 
     #Recibe un archivo de entrada y crea un diccionario con los lexemas con su posicion en el texto donde la posicion es el numero de lexemas
     # Y va creando un archivo de salida con el siguiente formato: 
@@ -148,19 +175,31 @@ class TokenizadorAFD:
         return lexemas, self.lista_salida, self.afd.get_ids()
 
 
+
 def main():
     print("Creando tokenizador")
     tokenizador = TokenizadorAFD()
+
+    if os.path.exists('afd_persist.json'):
+        print("Cargando AFD desde JSON existente")
+        tokenizador.cargar_afd('afd_persist.json')
+    else:
+        print("No se encontró archivo JSON, se creará uno nuevo")
 
     # abrir archivo de palabras convertir todo a una sola linea y llamar a tokenizador
     with open("in.txt","r", encoding='utf-8') as archivo:
         texto = archivo.read().replace('\n', ' ')
         lexemas, salida_sintaxis, tokens = tokenizador.tokenizador(texto)
 
-        print("Lexemas: ", lexemas)
-        print("Salida sintaxis: ", salida_sintaxis)
-        print("Tokens: ", tokens)
+    # Guardar en archivo de salida se genera uno nuevo por cada texto de entrada
+    now = datetime.now()
+    timestamp = now.strftime("%Y%m%d_%H%M%S")
+    output_filename = f"out_{timestamp}.txt"
+    with open(output_filename, "w") as archivo:
+        archivo.write(" ".join(salida_sintaxis))
 
-
+    # Guardar en archivo de salida se genera uno nuevo por cada texto de entrada
+    tokenizador.guardar_afd('afd_persist.json')
+    
 if __name__ == "__main__":
     main()

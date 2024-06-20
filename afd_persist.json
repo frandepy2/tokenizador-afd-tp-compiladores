@@ -1,0 +1,1 @@
+{"estado_inicial": "q0", "estados_finales": {"ARTICULO": "q_ARTICULO", "SUSTANTIVO": "q_SUSTANTIVO", "VERBO": "q_VERBO", "ADJETIVO": "q_ADJETIVO", "ADVERBIO": "q_ADVERBIO", "ERROR_LX,": "q_ERROR_LX,"}, "transiciones": {"q0": {"perro": "q_SUSTANTIVO", "gato": "q_SUSTANTIVO", "loro": "q_SUSTANTIVO"}}, "lexema_ids": {"perro": 1, "gato": 2, "loro": 3}, "next_id": 4}
