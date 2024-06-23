@@ -7,12 +7,13 @@ from datetime import datetime
 
 # Este afd usa patrones por extensión, es decir, se definen los estados con cada elemento y transiciones
 class AFD:
-    def __init__(self, estado_inicial, estados_finales):
+    def __init__(self, estado_inicial, estados_finales, contador_documentos=0):
         self.estado_inicial = estado_inicial #Estado inicial
         self.estados_finales = estados_finales #Diccionario de estados finales
         self.transiciones = {estado_inicial: {}} #Diccionario de transiciones
         self.lexema_ids = {} #Diccionario para guardar los ids de los lexemas
         self.next_id = 1
+        self.contador_documentos = contador_documentos
 
     def agregar_transicion(self, estado_origen, lexema, estado_destino):
         if estado_origen not in self.transiciones:
@@ -50,7 +51,8 @@ class AFD:
             'estados_finales': self.estados_finales,
             'transiciones': self.transiciones,
             'lexema_ids': self.lexema_ids,
-            'next_id': self.next_id
+            'next_id': self.next_id,
+            'contador_documentos': self.contador_documentos
         }
         with open(filename, 'w') as f:
             json.dump(data, f)
@@ -63,6 +65,7 @@ class AFD:
         self.transiciones = data['transiciones']
         self.lexema_ids = data['lexema_ids']
         self.next_id = data['next_id']
+        self.contador_documentos = data.get('contador_documentos', 0)
 
 class TokenizadorAFD:
     def __init__(self):
@@ -80,7 +83,7 @@ class TokenizadorAFD:
             'VERBO': 'q_VERBO',
             'ADJETIVO': 'q_ADJETIVO',
             'ADVERBIO': 'q_ADVERBIO',
-            'ERROR_LX,': 'q_ERROR_LX,',
+            'ERROR_LX': 'q_ERROR_LX',
         }
 
         print("Creando AFD")
@@ -109,7 +112,7 @@ class TokenizadorAFD:
         return self.afd.lexema_ids[adverbio]
     
     def agregar_error_lexico(self, error_lx):
-        self.afd.agregar_transicion("q0", error_lx, "q_ERROR_LX,")
+        self.afd.agregar_transicion("q0", error_lx, "q_ERROR_LX")
         return self.afd.lexema_ids[error_lx]
 
         
@@ -136,7 +139,7 @@ class TokenizadorAFD:
                 print(f"Lexema aceptado: {lexema} se detecto como {estado} en la posicion {self.posicion+1}, posicion en el diccionario: {id_lexema} palabra original: {palabras[self.posicion]}")
                 #Agregamos a lista_salida el proceso con el formato TXT#-N donde TXT es una etiqueta fija, # es el id del lexema y N es la posicion en el texto
                 #En el caso de Error Lexixo el id de lexema es 0
-                self.lista_salida.append(f"TXT{id_lexema}-{self.posicion+1}")
+                self.lista_salida.append(f"TXT{self.afd.contador_documentos}-{self.afd.lexema_ids[lexema]}")
                 self.posicion += 1
             else:
                 #Si no es aceptado, le preguntamos al usuario si desea agregarlo al diccionario
@@ -167,7 +170,7 @@ class TokenizadorAFD:
 
                 #Agregamos a lista_salida el proceso con el formato TXT#-N donde TXT es una etiqueta fija, # es el id del lexema y N es la posicion en el texto
                 #En el caso de Error Lexixo el id de lexema es 0
-                self.lista_salida.append(f"TXT{id_lexema}-{self.posicion+1}")
+                self.lista_salida.append(f"TXT{self.afd.contador_documentos}-{self.afd.lexema_ids[lexema]}")
 
                 self.posicion += 1
 
@@ -186,6 +189,9 @@ def main():
     else:
         print("No se encontró archivo JSON, se creará uno nuevo")
 
+    # Incrementar el contador de documentos
+    tokenizador.afd.contador_documentos += 1
+
     # abrir archivo de palabras convertir todo a una sola linea y llamar a tokenizador
     with open("in.txt","r", encoding='utf-8') as archivo:
         texto = archivo.read().replace('\n', ' ')
@@ -203,3 +209,4 @@ def main():
     
 if __name__ == "__main__":
     main()
+
