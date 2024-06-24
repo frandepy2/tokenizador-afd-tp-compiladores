@@ -1,5 +1,7 @@
 import re
 import json
+import tkinter as tk
+from tkinter import filedialog, messagebox
 import os
 from datetime import datetime
 
@@ -171,29 +173,28 @@ class TokenizadorAFD:
             else:
                 #Si no es aceptado, le preguntamos al usuario si desea agregarlo al diccionario
                 print(f"Lexema no aceptado: {lexema}")
-                bandera = True
-                while bandera:
-                    eleccion = input("Eliga entre un token o un error lexico: 1-Articulo, 2-Sustantivo, 3-Verbo, 4-Adjetivo, 5-Adverbio, 6-Error lexico: ")
-                    if eleccion == "1":
-                        id_lexema = self.agregar_articulo(lexema)
-                        bandera = False
-                    elif eleccion == "2":
-                        id_lexema = self.agregar_sustantivo(lexema)
-                        bandera = False
-                    elif eleccion == "3":
-                        id_lexema = self.agregar_verbo(lexema)
-                        bandera = False
-                    elif eleccion == "4":
-                        id_lexema = self.agregar_adjetivo(lexema)
-                        bandera = False
-                    elif eleccion == "5":
-                        id_lexema = self.agregar_adverbio(lexema)
-                        bandera = False
-                    elif eleccion == "6":
-                        id_lexema = self.agregar_error_lexico(lexema)
-                        bandera = False
-                    else:
-                        print("Opcion invalida")
+                eleccion = elegir_categoria(lexema, self)
+
+                if eleccion == "1":
+                    id_lexema = self.agregar_articulo(lexema)
+                    bandera = False
+                elif eleccion == "2":
+                    id_lexema = self.agregar_sustantivo(lexema)
+                    bandera = False
+                elif eleccion == "3":
+                    id_lexema = self.agregar_verbo(lexema)
+                    bandera = False
+                elif eleccion == "4":
+                    id_lexema = self.agregar_adjetivo(lexema)
+                    bandera = False
+                elif eleccion == "5":
+                    id_lexema = self.agregar_adverbio(lexema)
+                    bandera = False
+                elif eleccion == "6":
+                    id_lexema = self.agregar_error_lexico(lexema)
+                    bandera = False
+                else:
+                    print("Opcion invalida")
 
                 #Agregamos a lista_salida el proceso con el formato TXT#-N donde TXT es una etiqueta fija, # es el id del lexema y N es la posicion en el texto
                 #En el caso de Error Lexixo el id de lexema es 0
@@ -205,8 +206,98 @@ class TokenizadorAFD:
         return lexemas, self.lista_salida, self.afd.get_ids(), contador_lexemas_procesados, contador_lexemas_no_procesados, cantidad_lexemas
 
 
+def elegir_categoria(lexema, tokenizador):
+    def seleccion(eleccion):
+        opciones = {
+            "1": lambda: tokenizador.agregar_articulo(lexema),
+            "2": lambda: tokenizador.agregar_sustantivo(lexema),
+            "3": lambda: tokenizador.agregar_verbo(lexema),
+            "4": lambda: tokenizador.agregar_adjetivo(lexema),
+            "5": lambda: tokenizador.agregar_adverbio(lexema),
+            "6": lambda: tokenizador.agregar_error_lexico(lexema),
+        }
+        if eleccion in opciones:
+            id_lexema = opciones[eleccion]()
+            top.destroy()
+            return id_lexema
+        else:
+            messagebox.showerror("Error", "Opción inválida")
+
+    top = tk.Toplevel()
+    top.title("Seleccionar categoría del lexema")
+    msg = tk.Label(top, text=f"Lexema no aceptado: {lexema}\nElige una categoría:")
+    msg.pack()
+
+    opciones = ["1-Artículo", "2-Sustantivo", "3-Verbo", "4-Adjetivo", "5-Adverbio", "6-Error léxico"]
+    for opcion in opciones:
+        btn = tk.Button(top, text=opcion, command=lambda op=opcion.split('-')[0]: seleccion(op))
+        btn.pack()
+
+    top.wait_window()
 
 def main():
+    def cargar_archivo():
+        archivo = filedialog.askopenfilename(title="Seleccionar archivo de entrada", filetypes=[("Archivos de texto", "*.txt")])
+        if archivo:
+            with open("in.txt","r", encoding='utf-8') as archivo:
+
+                estadisticas_antes()
+
+                texto = archivo.read().replace('\n', ' ')
+                lexemas, salida_sintaxis, tokens, contador_lexemas_procesados, contador_lexemas_no_procesados, cantidad_lexemas = tokenizador.tokenizador(texto)
+
+                porcentaje_lexemas_procesados = contador_lexemas_procesados / cantidad_lexemas * 100
+                porcentaje_lexemas_no_procesados = contador_lexemas_no_procesados / cantidad_lexemas * 100
+
+                porcentaje.set(f"Se procesaron {contador_lexemas_procesados} lexemas de {cantidad_lexemas} ({porcentaje_lexemas_procesados}%)\n"
+                              f"No se procesaron {contador_lexemas_no_procesados} lexemas de {cantidad_lexemas} ({porcentaje_lexemas_no_procesados}%)")
+
+
+                now = datetime.now()
+                timestamp = now.strftime("%Y%m%d_%H%M%S")
+                output_filename = f"out_{timestamp}.txt"
+                with open(output_filename, "w") as archivo:
+                    archivo.write(" ".join(salida_sintaxis))
+
+
+                tokenizador.guardar_afd('afd_persist.json')
+                actualizar_estadisticas()
+                messagebox.showinfo("Proceso completado", f"Se guardó el archivo de salida en {output_filename}")
+
+    def estadisticas_antes():
+        cant_articulos = tokenizador.get_cantidad_lexemas_por_token("q_ARTICULO")
+        cant_sustantivos = tokenizador.get_cantidad_lexemas_por_token("q_SUSTANTIVO")
+        cant_verbos = tokenizador.get_cantidad_lexemas_por_token("q_VERBO")
+        cant_adjetivos = tokenizador.get_cantidad_lexemas_por_token("q_ADJETIVO")
+        cant_adverbios = tokenizador.get_cantidad_lexemas_por_token("q_ADVERBIO")
+        cant_errores = tokenizador.get_cantidad_lexemas_por_token("q_ERROR_LX")
+
+        res_antes.set(  "Resultados luego del proceso del texto\n"
+                        f"Articulo: {cant_articulos}\n"
+                        f"Sustantivo: {cant_sustantivos}\n"
+                        f"Verbo: {cant_verbos}\n"
+                        f"Adjetivo: {cant_adjetivos}\n"
+                        f"Adverbio: {cant_adverbios}\n"
+                        f"Errores lexicos: {cant_errores}")
+        
+
+    def actualizar_estadisticas():
+        cant_articulos = tokenizador.get_cantidad_lexemas_por_token("q_ARTICULO")
+        cant_sustantivos = tokenizador.get_cantidad_lexemas_por_token("q_SUSTANTIVO")
+        cant_verbos = tokenizador.get_cantidad_lexemas_por_token("q_VERBO")
+        cant_adjetivos = tokenizador.get_cantidad_lexemas_por_token("q_ADJETIVO")
+        cant_adverbios = tokenizador.get_cantidad_lexemas_por_token("q_ADVERBIO")
+        cant_errores = tokenizador.get_cantidad_lexemas_por_token("q_ERROR_LX")
+
+        resultado.set(  "Resultados luego del proceso del texto\n"
+                        f"Articulo: {cant_articulos}\n"
+                        f"Sustantivo: {cant_sustantivos}\n"
+                        f"Verbo: {cant_verbos}\n"
+                        f"Adjetivo: {cant_adjetivos}\n"
+                        f"Adverbio: {cant_adverbios}\n"
+                        f"Errores lexicos: {cant_errores}")
+        
+
     print("Creando tokenizador")
     tokenizador = TokenizadorAFD()
 
@@ -219,71 +310,38 @@ def main():
     # Incrementar el contador de documentos
     tokenizador.afd.contador_documentos += 1
     
-    print()
-    print("Cantidad de lexemas por token antes de procesar texto: ")
-    cant_articulos_inicial = tokenizador.get_cantidad_lexemas_por_token("q_ARTICULO")
-    cant_sustantivos_inicial = tokenizador.get_cantidad_lexemas_por_token("q_SUSTANTIVO")
-    cant_verbos_inicial = tokenizador.get_cantidad_lexemas_por_token("q_VERBO")
-    cant_adjetivos_inicial = tokenizador.get_cantidad_lexemas_por_token("q_ADJETIVO")
-    cant_adverbios_inicial = tokenizador.get_cantidad_lexemas_por_token("q_ADVERBIO")
-    cant_errores_inicial = tokenizador.get_cantidad_lexemas_por_token("q_ERROR_LX")
+    # Crear la interfaz gráfica
+    root = tk.Tk()
+    root.title("Tokenizador AFD")
 
-    print("Articulo : ",cant_articulos_inicial)
-    print("Sustantivo : ",cant_sustantivos_inicial)
-    print("Verbo : ",cant_verbos_inicial)
-    print("Adjetivo : ",cant_adjetivos_inicial)
-    print("Adverbio : ",cant_adverbios_inicial)
-    print("Errores lexicos :", cant_errores_inicial)
-    print()
+    frame = tk.Frame(root)
+    frame.pack(padx=10, pady=10)
+
+    cargar_button = tk.Button(frame, text="Cargar archivo de texto", command=cargar_archivo)
+    cargar_button.pack(pady=5)
+
+    porcentaje = tk.StringVar()
+    porcentaje_label = tk.Label(frame, textvariable=porcentaje, justify="left")
+    porcentaje_label.pack(pady=5)
+
+    # Variables de estadísticas
+    stats_text = tk.StringVar()
+    stats_label = tk.Label(frame, textvariable=stats_text, justify="left")
+    stats_label.pack(pady=5)
+    
+    res_antes = tk.StringVar()
+    res_antes_label = tk.Label(frame, textvariable=res_antes, justify="left")
+    res_antes_label.pack(pady=5)
+
+    resultado = tk.StringVar()
+    resultado_label = tk.Label(frame, textvariable=resultado, justify="left")
+    resultado_label.pack(pady=5)
 
 
-    # abrir archivo de palabras convertir todo a una sola linea y llamar a tokenizador
-    with open("in.txt","r", encoding='utf-8') as archivo:
-        texto = archivo.read().replace('\n', ' ')
-        lexemas, salida_sintaxis, tokens, contador_lexemas_procesados, contador_lexemas_no_procesados, cantidad_lexemas = tokenizador.tokenizador(texto)
+    root.mainloop()
 
-        porcentaje_lexemas_procesados = contador_lexemas_procesados / cantidad_lexemas * 100
-        porcentaje_lexemas_no_procesados = contador_lexemas_no_procesados / cantidad_lexemas * 100
-        print()
-        print(f"Se procesaron {contador_lexemas_procesados} lexemas de {cantidad_lexemas} ({porcentaje_lexemas_procesados}%)")
-        print(f"No se procesaron {contador_lexemas_no_procesados} lexemas de {cantidad_lexemas} ({porcentaje_lexemas_no_procesados}%)")
-
-    # Guardar en archivo de salida se genera uno nuevo por cada texto de entrada
-    now = datetime.now()
-    timestamp = now.strftime("%Y%m%d_%H%M%S")
-    output_filename = f"out_{timestamp}.txt"
-    with open(output_filename, "w") as archivo:
-        archivo.write(" ".join(salida_sintaxis))
-
-    # Guardar en archivo de salida se genera uno nuevo por cada texto de entrada
-    tokenizador.guardar_afd('afd_persist.json')
-    print()
-    print("Cantidad de lexemas por token despues de procesar texto: ")
-    cantidad_despues_articulos = tokenizador.get_cantidad_lexemas_por_token("q_ARTICULO")
-    cantidad_despues_sustantivos = tokenizador.get_cantidad_lexemas_por_token("q_SUSTANTIVO")
-    cantidad_despues_verbos = tokenizador.get_cantidad_lexemas_por_token("q_VERBO")
-    cantidad_despues_adjetivos = tokenizador.get_cantidad_lexemas_por_token("q_ADJETIVO")
-    cantidad_despues_adverbios = tokenizador.get_cantidad_lexemas_por_token("q_ADVERBIO")
-    cantidad_despues_errores = tokenizador.get_cantidad_lexemas_por_token("q_ERROR_LX")
-
-    print("Articulo : ",cantidad_despues_articulos)
-    print("Sustantivo : ",cantidad_despues_sustantivos)
-    print("Verbo : ",cantidad_despues_verbos)
-    print("Adjetivo : ",cantidad_despues_adjetivos)
-    print("Adverbio : ",cantidad_despues_adverbios)
-    print("Errores lexicos :", cantidad_despues_errores)
-    print()
-    print("Diferencia de lexemas por token: ")
-    print("Articulo : ",cantidad_despues_articulos - cant_articulos_inicial)
-    print("Sustantivo : ",cantidad_despues_sustantivos - cant_sustantivos_inicial)
-    print("Verbo : ",cantidad_despues_verbos - cant_verbos_inicial)
-    print("Adjetivo : ",cantidad_despues_adjetivos - cant_adjetivos_inicial)
-    print("Adverbio : ",cantidad_despues_adverbios - cant_adverbios_inicial)
-    print("Errores lexicos :", cantidad_despues_errores - cant_errores_inicial)
-    print()
-    print ("Se guardo el AFD en el archivo afd_persist.json")
-    print (f"Se guardo el archivo de salida en {output_filename}")
 
 if __name__ == "__main__":
     main()
+
 
