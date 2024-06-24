@@ -1,6 +1,7 @@
 import re
 import json
 import tkinter as tk
+from tkinter import ttk
 from tkinter import filedialog, messagebox
 import os
 from datetime import datetime
@@ -239,7 +240,7 @@ def main():
     def cargar_archivo():
         archivo = filedialog.askopenfilename(title="Seleccionar archivo de entrada", filetypes=[("Archivos de texto", "*.txt")])
         if archivo:
-            with open("in.txt","r", encoding='utf-8') as archivo:
+            with open(archivo,"r", encoding='utf-8') as archivo:
 
                 estadisticas_antes()
 
@@ -263,6 +264,13 @@ def main():
                 tokenizador.guardar_afd('afd_persist.json')
                 actualizar_estadisticas()
                 messagebox.showinfo("Proceso completado", f"Se guardó el archivo de salida en {output_filename}")
+
+                # Update the preview text widget
+                preview_text.config(state=tk.NORMAL)  # Enable editing to update the content
+                preview_text.delete(1.0, tk.END)
+                preview_text.insert(tk.END, texto)
+                preview_text.config(state=tk.DISABLED)  # Disable editing again
+
 
     def estadisticas_antes():
         cant_articulos = tokenizador.get_cantidad_lexemas_por_token("q_ARTICULO")
@@ -314,34 +322,54 @@ def main():
     root = tk.Tk()
     root.title("Tokenizador AFD")
 
+    # Configura el notebook
+    notebook = ttk.Notebook(root)
+    notebook.pack(fill='both', expand=True)
+
+
+
+    # Pestañas para diferentes vistas
+    frame_carga = ttk.Frame(notebook)
+    frame_resultados = ttk.Frame(notebook)
+    frame_estadisticas = ttk.Frame(notebook)
+
+    notebook.add(frame_carga, text="Cargar Archivo")
+    notebook.add(frame_resultados, text="Resultados")
+    notebook.add(frame_estadisticas, text="Estadísticas")
+
     frame = tk.Frame(root)
     frame.pack(padx=10, pady=10)
 
-    cargar_button = tk.Button(frame, text="Cargar archivo de texto", command=cargar_archivo)
+    cargar_button = tk.Button(frame_carga, text="Cargar archivo de texto", command=cargar_archivo)
     cargar_button.pack(pady=5)
 
     porcentaje = tk.StringVar()
-    porcentaje_label = tk.Label(frame, textvariable=porcentaje, justify="left")
+    porcentaje_label = tk.Label(frame_estadisticas, textvariable=porcentaje, justify="left")
     porcentaje_label.pack(pady=5)
 
     # Variables de estadísticas
     stats_text = tk.StringVar()
-    stats_label = tk.Label(frame, textvariable=stats_text, justify="left")
+    stats_label = tk.Label(frame_estadisticas, textvariable=stats_text, justify="left")
     stats_label.pack(pady=5)
     
     res_antes = tk.StringVar()
-    res_antes_label = tk.Label(frame, textvariable=res_antes, justify="left")
+    res_antes_label = tk.Label(frame_resultados, textvariable=res_antes, justify="left")
     res_antes_label.pack(pady=5)
 
     resultado = tk.StringVar()
-    resultado_label = tk.Label(frame, textvariable=resultado, justify="left")
+    resultado_label = tk.Label(frame_resultados, textvariable=resultado, justify="left")
     resultado_label.pack(pady=5)
 
+    preview_label = tk.Label(frame_resultados, text="Previsualización del texto cargado:")
+    preview_label.pack(pady=5)
+    preview_text = tk.Text(frame, height=10, width=50)
+    preview_text.pack(pady=5)
 
     root.mainloop()
 
 
 if __name__ == "__main__":
     main()
+
 
 
